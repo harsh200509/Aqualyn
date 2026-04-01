@@ -1,20 +1,45 @@
-<div align="center">
-<img width="1200" height="475" alt="GHBanner" src="https://github.com/user-attachments/assets/0aa67016-6eaf-458a-adb2-6e31a0763ed6" />
-</div>
+# Aqualyn - Liquid Social Messenger
 
-# Run and deploy your AI Studio app
+Aqualyn is a high-fidelity, fluid messaging and social platform designed for global scalability and secure communication.
 
-This contains everything you need to run your app locally.
+## 🚀 Getting Started
 
-View your app in AI Studio: https://ai.studio/apps/f427f6d9-db24-4c62-914f-f8621b1869d3
+1. **Install Dependencies:**
+   ```bash
+   npm install
+   ```
 
-## Run Locally
+2. **Run Development Server:**
+   ```bash
+   npm run dev
+   ```
 
-**Prerequisites:**  Node.js
+3. **Build for Production:**
+   ```bash
+   npm run build
+   ```
 
+## 📱 Mobile Deployment (APK)
 
-1. Install dependencies:
-   `npm install`
-2. Set the `GEMINI_API_KEY` in [.env.local](.env.local) to your Gemini API key
-3. Run the app:
-   `npm run dev`
+Aqualyn is designed to be converted into a native APK using **Capacitor.js**. See [PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md) for detailed instructions on building the APK and deploying it to the Play Store.
+
+## 🎨 Design System & UI/UX
+
+Aqualyn uses a unique **Liquid UI** design system. For detailed guidelines on the niche, design philosophy, theme, and technical implementation, refer to:
+👉 **[DESIGN_GUIDELINES.md](./DESIGN_GUIDELINES.md)**
+
+## 🏗️ System Architecture
+
+For a detailed breakdown of the production-level backend architecture, database strategy, and scaling for 100k+ users, please refer to:
+👉 **[PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md)**
+
+## 🛠️ Tech Stack
+
+- **Frontend:** React 18, TypeScript, Tailwind CSS, Framer Motion.
+- **Icons:** Lucide React.
+- **Mobile Bridge:** Capacitor.js.
+- **Backend (Target):** Node.js / Go / PostgreSQL / Redis.
+
+---
+
+**Project Status:** Prototype / Production-Ready Architecture Defined.

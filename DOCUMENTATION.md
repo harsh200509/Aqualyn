@@ -95,3 +95,15 @@ To handle 2B users, we employ a multi-tier storage strategy:
 2. **Phase 2 (Beta)**: Transition to Firebase for real-time sync and initial user testing.
 3. **Phase 3 (Scale)**: Migrate to AWS EKS, implement ScyllaDB for message history, and launch the APK distribution site.
 4. **Phase 4 (Global)**: Multi-region deployment, E2EE implementation, and global marketing launch.
+
+---
+
+## 🎨 Design System & UI/UX
+
+Aqualyn uses a unique **Liquid UI** design system. For detailed guidelines on the niche, design philosophy, theme, and technical implementation, refer to:
+👉 **[DESIGN_GUIDELINES.md](./DESIGN_GUIDELINES.md)**
+
+## 🚀 Production Setup & System Design
+
+For a detailed breakdown of the production-level backend architecture, database strategy, and scaling for 100k+ users, please refer to:
+👉 **[PRODUCTION_SETUP.md](./PRODUCTION_SETUP.md)**
