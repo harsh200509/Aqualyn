@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { Image as ImageIcon, FileText, MapPin, Camera, Video, Wallet } from 'lucide-react';
+import { Image as ImageIcon, FileText, MapPin, Camera, Video, Wallet, Clock } from 'lucide-react';
 
 interface MediaAttachmentPickerProps {
   isOpen: boolean;
@@ -15,6 +15,7 @@ export default function MediaAttachmentPicker({ isOpen, onClose, onSelect }: Med
     { id: 'document', icon: FileText, label: 'Document', color: 'bg-indigo-500', iconColor: 'text-white' },
     { id: 'location', icon: MapPin, label: 'Location', color: 'bg-emerald-500', iconColor: 'text-white' },
     { id: 'wallet', icon: Wallet, label: 'Send Money', color: 'bg-green-500', iconColor: 'text-white' },
+    { id: 'schedule', icon: Clock, label: 'Schedule', color: 'bg-orange-500', iconColor: 'text-white' },
   ];
 
   return (

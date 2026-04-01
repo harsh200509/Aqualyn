@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { AnimatePresence } from 'motion/react';
 import LoginScreen from './screens/LoginScreen';
 import ChatListScreen from './screens/ChatListScreen';
@@ -9,6 +9,7 @@ import ContactsScreen from './screens/ContactsScreen';
 import EditProfileScreen from './screens/EditProfileScreen';
 import ContactProfileScreen from './screens/ContactProfileScreen';
 import StoriesScreen from './screens/StoriesScreen';
+import NotificationsScreen from './screens/NotificationsScreen';
 import BottomNav from './components/BottomNav';
 import ToastContainer from './components/ui/ToastContainer';
 import AppLockScreen from './components/AppLockScreen';
@@ -16,10 +17,32 @@ import { useAppContext } from './context/AppContext';
 
 export default function App() {
   const [currentScreen, setCurrentScreen] = useState('login');
-  const { isAppLocked, appLockPin } = useAppContext();
+  const { isAppLocked, appLockPin, theme, aquaIntensity } = useAppContext();
+
+  useEffect(() => {
+    // Apply theme settings
+    document.documentElement.style.setProperty('--color-secondary', theme.accentColor);
+    document.documentElement.style.setProperty('--color-secondary-container', `${theme.accentColor}33`); // 20% opacity
+    document.documentElement.style.setProperty('--color-on-secondary-container', theme.accentColor);
+    document.documentElement.style.fontSize = `${theme.fontSize}px`;
+    
+    // Apply bubble style
+    document.body.classList.remove('bubble-rounded', 'bubble-sharp', 'bubble-glass');
+    document.body.classList.add(`bubble-${theme.bubbleStyle}`);
+
+    // Apply aqua intensity
+    document.documentElement.style.setProperty('--aqua-intensity', `${aquaIntensity}%`);
+    
+    // Apply dark mode
+    if (theme.mode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme, aquaIntensity]);
 
   return (
-    <div className="min-h-screen bg-surface text-on-surface font-body selection:bg-secondary-container/30 overflow-x-hidden">
+    <div className={`min-h-screen bg-surface text-on-surface font-body selection:bg-secondary-container/30 overflow-x-hidden bubble-${theme.bubbleStyle}`}>
       <ToastContainer />
       
       {appLockPin && isAppLocked ? (
@@ -36,6 +59,7 @@ export default function App() {
             {currentScreen === 'edit-profile' && <EditProfileScreen key="edit-profile" onBack={() => setCurrentScreen('profile')} />}
             {currentScreen === 'contact-profile' && <ContactProfileScreen key="contact-profile" onBack={() => setCurrentScreen('contacts')} onNavigate={setCurrentScreen} />}
             {currentScreen === 'stories' && <StoriesScreen key="stories" onBack={() => setCurrentScreen('chats')} onNavigate={setCurrentScreen} />}
+            {currentScreen === 'notifications' && <NotificationsScreen key="notifications" onBack={() => setCurrentScreen('chats')} />}
           </AnimatePresence>
           
           {currentScreen !== 'login' && currentScreen !== 'chat-detail' && currentScreen !== 'contact-profile' && currentScreen !== 'edit-profile' && (

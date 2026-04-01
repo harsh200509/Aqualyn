@@ -1,11 +1,12 @@
 import React from 'react';
-import { MessageCircle, Users, CircleDashed, Settings as SettingsIcon } from 'lucide-react';
+import { MessageCircle, Users, CircleDashed, Settings as SettingsIcon, Bell } from 'lucide-react';
 
 export default function BottomNav({ currentScreen, onNavigate }: { currentScreen: string, onNavigate: (s: string) => void }) {
   const navItems = [
     { id: 'chats', icon: MessageCircle, label: 'Chats' },
     { id: 'contacts', icon: Users, label: 'Contacts' },
     { id: 'stories', icon: CircleDashed, label: 'Stories' },
+    { id: 'notifications', icon: Bell, label: 'Activity' },
     { id: 'settings', icon: SettingsIcon, label: 'Settings' }
   ];
 

@@ -3,7 +3,22 @@ import { Palette, Check, SlidersHorizontal } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 
 export default function VisualPreferences() {
-  const { aquaIntensity, setAquaIntensity } = useAppContext();
+  const { aquaIntensity, setAquaIntensity, theme, setTheme } = useAppContext();
+  
+  const themeModes = [
+    { label: 'Liquid (Light)', value: 'light' },
+    { label: 'Obsidian (Dark)', value: 'dark' }
+  ];
+
+  const handleThemeChange = (mode: 'light' | 'dark') => {
+    setTheme(prev => ({ ...prev, mode }));
+    if (mode === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  };
+
   return (
     <section className="space-y-4">
       <h3 className="font-headline font-bold text-lg text-on-surface px-2 flex items-center gap-2">
@@ -14,10 +29,14 @@ export default function VisualPreferences() {
         <div>
           <label className="font-semibold text-on-surface mb-3 block">Theme Mode</label>
           <div className="grid grid-cols-2 gap-3">
-            {['Liquid (Light)', 'Obsidian (Dark)', 'Frutiger (Aero)', 'Dynamic (System)'].map((theme, i) => (
-              <button key={i} className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${i === 0 ? 'border-secondary bg-secondary/5 shadow-sm' : 'border-outline-variant/30 hover:bg-white/40'}`}>
-                <span className={`font-medium ${i === 0 ? 'text-secondary' : 'text-on-surface-variant'}`}>{theme}</span>
-                {i === 0 && <Check className="w-4 h-4 text-secondary" />}
+            {themeModes.map((t, i) => (
+              <button 
+                key={i} 
+                onClick={() => handleThemeChange(t.value as 'light' | 'dark')}
+                className={`p-4 rounded-2xl border flex items-center justify-between transition-all ${theme.mode === t.value ? 'border-secondary bg-secondary/5 shadow-sm' : 'border-outline-variant/30 hover:bg-white/40'}`}
+              >
+                <span className={`font-medium ${theme.mode === t.value ? 'text-secondary' : 'text-on-surface-variant'}`}>{t.label}</span>
+                {theme.mode === t.value && <Check className="w-4 h-4 text-secondary" />}
               </button>
             ))}
           </div>

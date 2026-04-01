@@ -2,12 +2,14 @@ import React, { useState } from 'react';
 import { Shield, Smartphone, Download, Trash2, MonitorSmartphone, Lock, Key } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 import { motion, AnimatePresence } from 'motion/react';
+import DeactivateAccountModal from '../modals/DeactivateAccountModal';
 
 export default function SecuritySettings() {
   const { appLockPin, setAppLockPin, archiveLockPin, setArchiveLockPin, addToast } = useAppContext();
   const [isPinModalOpen, setIsPinModalOpen] = useState(false);
   const [pinType, setPinType] = useState<'app' | 'archive'>('app');
   const [pinValue, setPinValue] = useState('');
+  const [isDeactivateModalOpen, setIsDeactivateModalOpen] = useState(false);
 
   const handleSetPin = () => {
     if (pinValue.length < 4) {
@@ -86,7 +88,10 @@ export default function SecuritySettings() {
             </div>
           </div>
         </div>
-        <div className="p-5 hover:bg-red-50/50 transition-colors cursor-pointer flex items-center justify-between group">
+        <div 
+          onClick={() => setIsDeactivateModalOpen(true)}
+          className="p-5 hover:bg-red-50/50 transition-colors cursor-pointer flex items-center justify-between group"
+        >
           <div className="flex items-center gap-4">
             <div className="w-10 h-10 rounded-xl bg-red-50 flex items-center justify-center text-red-500 group-hover:bg-red-100 transition-colors">
               <Trash2 className="w-5 h-5" />
@@ -143,6 +148,11 @@ export default function SecuritySettings() {
           </div>
         )}
       </AnimatePresence>
+
+      <DeactivateAccountModal 
+        isOpen={isDeactivateModalOpen}
+        onClose={() => setIsDeactivateModalOpen(false)}
+      />
     </section>
   );
 }

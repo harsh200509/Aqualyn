@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { ArrowLeft, Video, Phone, MoreVertical, Plus, Smile, Mic, CheckCheck, Users, X, Clock, Lock, Search, Download, Trash2, Edit2 } from 'lucide-react';
+import { ArrowLeft, Video, Phone, MoreVertical, Plus, Smile, Mic, CheckCheck, Users, X, Clock, Lock, Search, Download, Trash2, Edit2, Share2, UserPlus } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import { Message } from '../types';
 import MediaAttachmentPicker from '../components/chat/MediaAttachmentPicker';
@@ -11,9 +11,10 @@ import MediaGallery from '../components/chat/MediaGallery';
 import CallScreen from '../components/chat/CallScreen';
 import GroupInfoScreen from './GroupInfoScreen';
 import SecretChatInfoScreen from './SecretChatInfoScreen';
+import ShareContactModal from '../components/chat/ShareContactModal';
 
 export default function ChatDetailScreen({ onBack, onNavigate }: { onBack: () => void, onNavigate: (s: string) => void }) {
-  const { messages, sendMessage, editMessage, deleteMessage, currentUser, chats, activeChatId, addToast, setActiveChatId, setActiveContactId } = useAppContext();
+  const { messages, sendMessage, editMessage, deleteMessage, currentUser, chats, activeChatId, addToast, setActiveChatId, setActiveContactId, contacts, globalUsers, followUser } = useAppContext();
   const [text, setText] = useState('');
   const scrollRef = useRef<HTMLDivElement>(null);
   
@@ -27,6 +28,7 @@ export default function ChatDetailScreen({ onBack, onNavigate }: { onBack: () =>
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isShareContactOpen, setIsShareContactOpen] = useState(false);
   
   // New states for modals
   const [galleryMedia, setGalleryMedia] = useState<{ id: string, url: string, type: 'image' | 'video' }[]>([]);
@@ -49,17 +51,24 @@ export default function ChatDetailScreen({ onBack, onNavigate }: { onBack: () =>
     }
   }, [chatMessages]);
 
+  // Mock friend typing logic
   useEffect(() => {
-    if (text.length > 0) {
-      setIsTyping(true);
-      const timeout = setTimeout(() => setIsTyping(false), 2000);
-      return () => clearTimeout(timeout);
-    } else {
-      setIsTyping(false);
-    }
-  }, [text]);
+    // Randomly simulate friend typing for demonstration purposes
+    const interval = setInterval(() => {
+      if (Math.random() > 0.8) {
+        setIsTyping(true);
+        setTimeout(() => setIsTyping(false), 3000);
+      }
+    }, 10000);
+    return () => clearInterval(interval);
+  }, [activeChatId]);
 
   if (!chat) return null;
+
+  const targetUserId = !chat.isGroup ? chat.participantIds?.find(id => id !== currentUser?.id) : null;
+  const targetUser = targetUserId ? globalUsers.find(u => u.id === targetUserId) : null;
+  const isPrivateRestricted = targetUser?.isPrivate && !currentUser?.following?.includes(targetUser.id);
+  const isRequested = targetUser?.followRequests?.includes(currentUser?.id || '');
 
   const handleSend = (e?: React.FormEvent) => {
     e?.preventDefault();
@@ -109,6 +118,8 @@ export default function ChatDetailScreen({ onBack, onNavigate }: { onBack: () =>
       sendMessage(activeChatId, '', { payment: { amount: 50.00, currency: '$', status: 'completed' }, replyToId: replyingTo?.id });
       setReplyingTo(null);
       addToast('Money sent', 'success');
+    } else if (type === 'schedule') {
+      setShowSchedulePicker(true);
     } else {
       addToast(`Selected ${type} attachment (Mock)`, 'info');
     }
@@ -238,6 +249,12 @@ export default function ChatDetailScreen({ onBack, onNavigate }: { onBack: () =>
                     <button onClick={() => { setIsSearchOpen(!isSearchOpen); setShowHeaderMenu(false); }} className="flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-xl text-sm font-medium text-on-surface transition-colors">
                       <Search className="w-4 h-4" /> Search
                     </button>
+                    <button onClick={() => { setShowHeaderMenu(false); setIsShareContactOpen(true); }} className="flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-xl text-sm font-medium text-on-surface transition-colors">
+                      <Share2 className="w-4 h-4" /> Share Contact
+                    </button>
+                    <button onClick={() => { setShowHeaderMenu(false); addToast('Chat history cleared', 'success'); }} className="flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-xl text-sm font-medium text-on-surface transition-colors">
+                      <Clock className="w-4 h-4" /> Chat History
+                    </button>
                     <button onClick={handleExportChat} className="flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-xl text-sm font-medium text-on-surface transition-colors">
                       <Download className="w-4 h-4" /> Export Chat
                     </button>
@@ -309,7 +326,7 @@ export default function ChatDetailScreen({ onBack, onNavigate }: { onBack: () =>
                 <span className="w-1.5 h-1.5 bg-secondary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
                 <span className="w-1.5 h-1.5 bg-secondary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
               </div>
-              <span className="font-medium">Typing...</span>
+              <span className="font-medium">{chat.name} is typing...</span>
             </div>
           )}
         </div>
@@ -317,8 +334,35 @@ export default function ChatDetailScreen({ onBack, onNavigate }: { onBack: () =>
 
       <div className="fixed bottom-0 left-0 w-full p-4 md:p-6 bg-gradient-to-t from-background via-background/90 to-transparent z-50">
         <div className="max-w-4xl mx-auto w-full relative">
-          
-          <AnimatePresence>
+          {isPrivateRestricted ? (
+            <div className="flex flex-col items-center gap-3 py-4 glass-card border border-white/40 rounded-[2rem] shadow-xl">
+              <div className="flex items-center gap-2 text-on-surface-variant text-sm font-medium">
+                <Lock className="w-4 h-4" />
+                <span>This account is private</span>
+              </div>
+              {isRequested ? (
+                <button 
+                  className="w-full max-w-xs py-3 rounded-2xl bg-surface-container text-on-surface-variant font-bold border border-white/40 flex items-center justify-center gap-2 cursor-default"
+                >
+                  <Clock className="w-5 h-5" />
+                  Follow Request Pending
+                </button>
+              ) : (
+                <button 
+                  onClick={() => followUser(targetUser!.id)}
+                  className="w-full max-w-xs py-3 rounded-2xl liquid-gradient text-white font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <UserPlus className="w-5 h-5" />
+                  Follow to Message
+                </button>
+              )}
+              <p className="text-[10px] text-on-surface-variant/60 text-center px-4">
+                You need to be a follower to send messages to this private account.
+              </p>
+            </div>
+          ) : (
+            <>
+              <AnimatePresence>
             {editingMessage && (
               <motion.div 
                 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }}
@@ -378,9 +422,6 @@ export default function ChatDetailScreen({ onBack, onNavigate }: { onBack: () =>
                   className="w-full h-12 pl-4 pr-20 rounded-full bg-white/70 backdrop-blur-2xl border border-white/40 focus:ring-2 focus:ring-secondary/20 focus:border-secondary outline-none text-on-surface transition-all placeholder:text-on-surface-variant/50" 
                 />
                 <div className="absolute right-2 flex items-center">
-                  <button type="button" onClick={() => setShowSchedulePicker(true)} className="text-on-surface-variant hover:text-secondary p-1.5 transition-colors">
-                    <Clock className="w-5 h-5" />
-                  </button>
                   <button type="button" className="text-on-surface-variant hover:text-secondary p-1.5 transition-colors">
                     <Smile className="w-5 h-5" />
                   </button>
@@ -431,6 +472,8 @@ export default function ChatDetailScreen({ onBack, onNavigate }: { onBack: () =>
               </motion.div>
             )}
           </AnimatePresence>
+            </>
+          )}
         </div>
       </div>
       
@@ -473,6 +516,20 @@ export default function ChatDetailScreen({ onBack, onNavigate }: { onBack: () =>
           onBack={() => setIsSecretInfoOpen(false)}
         />
       )}
+
+      <ShareContactModal
+        isOpen={isShareContactOpen}
+        onClose={() => setIsShareContactOpen(false)}
+        onShare={(contactId) => {
+          const contact = contacts.find(c => c.id === contactId);
+          if (contact && activeChatId) {
+            sendMessage(activeChatId, '', { 
+              contact: { name: contact.name, phone: contact.phone || '+1 234 567 8900', avatar: contact.avatar }
+            });
+            addToast('Contact shared', 'success');
+          }
+        }}
+      />
 
       <div className="fixed top-20 right-[-10%] w-[40%] h-[40%] bg-primary-container/10 blur-[100px] rounded-full pointer-events-none -z-10"></div>
       <div className="fixed bottom-20 left-[-5%] w-[30%] h-[30%] bg-secondary-container/20 blur-[80px] rounded-full pointer-events-none -z-10"></div>

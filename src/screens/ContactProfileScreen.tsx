@@ -1,19 +1,45 @@
 import React from 'react';
 import { motion } from 'motion/react';
-import { ArrowLeft, MessageCircle, Phone, Video, Info, Bell, Ban, Trash2, Lock, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, MessageCircle, Phone, Video, Info, Bell, Ban, Trash2, Lock, ShieldCheck, UserPlus, UserCheck, Clock, Grid, PlayCircle } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 
 export default function ContactProfileScreen({ onBack, onNavigate }: { onBack: () => void, onNavigate: (s: string) => void }) {
-  const { contacts, activeContactId, setActiveChatId, addToast, chats, setChats } = useAppContext();
+  const { contacts, activeContactId, startChatWithContact, addToast, chats, setChats, currentUser, blockContact, reportContact, muteChat, followUser, unfollowUser, posts, globalUsers } = useAppContext();
   const [requestSent, setRequestSent] = React.useState(false);
+  const [activeTab, setActiveTab] = React.useState<'posts' | 'highlights'>('posts');
   
-  const contact = contacts.find(c => c.id === activeContactId);
-
+  const contact = globalUsers.find(c => c.id === activeContactId) || contacts.find(c => c.id === activeContactId);
+  const chat = chats.find(c => c.id === activeContactId);
+  const isBlocked = currentUser?.blockedUsers?.includes(activeContactId || '');
+  const isFollowing = currentUser?.following?.includes(activeContactId || '');
+  const isRequested = contact?.followRequests?.includes(currentUser?.id || '');
+  
   if (!contact) return null;
 
+  const userPosts = posts.filter(p => p.userId === contact.id);
+  const isPrivate = contact.isPrivate && !isFollowing;
+
   const handleMessage = () => {
-    setActiveChatId(contact.id);
+    startChatWithContact(contact.id);
     onNavigate('chat-detail');
+  };
+
+  const handleMute = () => {
+    if (activeContactId) {
+      muteChat(activeContactId);
+    }
+  };
+
+  const handleBlock = () => {
+    if (activeContactId) {
+      blockContact(activeContactId);
+    }
+  };
+
+  const handleReport = () => {
+    if (activeContactId) {
+      reportContact(activeContactId);
+    }
   };
 
   const handleRequestSecretChat = () => {
@@ -38,7 +64,7 @@ export default function ContactProfileScreen({ onBack, onNavigate }: { onBack: (
       }
       addToast(contact.name + ' accepted your secret chat request!', 'success');
       setRequestSent(false);
-      setActiveChatId(contact.id);
+      startChatWithContact(contact.id);
       onNavigate('chat-detail');
     }, 2000);
   };
@@ -54,41 +80,147 @@ export default function ContactProfileScreen({ onBack, onNavigate }: { onBack: (
 
       <main className="pt-24 px-4 max-w-2xl mx-auto space-y-6">
         <div className="flex flex-col items-center text-center space-y-4">
-          <div className="w-32 h-32 rounded-full border-4 border-white shadow-xl overflow-hidden">
+          <div className="w-32 h-32 rounded-full border-4 border-white shadow-xl overflow-hidden relative">
             <img src={contact.avatar} alt={contact.name} className="w-full h-full object-cover" />
+            {contact.isPrivate && (
+              <div className="absolute bottom-0 right-0 bg-white p-1.5 rounded-full shadow-md">
+                <Lock className="w-4 h-4 text-on-surface-variant" />
+              </div>
+            )}
           </div>
           <div>
             <h2 className="text-3xl font-extrabold font-headline text-on-surface">{contact.name}</h2>
+            <p className="text-on-surface-variant font-medium">@{contact.username || contact.name.toLowerCase().replace(' ', '')}</p>
           </div>
           
-          <div className="flex gap-4 pt-2">
-            <button onClick={handleMessage} className="flex flex-col items-center gap-2 p-4 rounded-2xl glass-card border border-white/40 shadow-sm hover:bg-white/60 transition-colors active:scale-95 w-24">
-              <MessageCircle className="w-6 h-6 text-primary" />
-              <span className="text-xs font-semibold text-on-surface">Message</span>
-            </button>
-            <button onClick={handleRequestSecretChat} disabled={requestSent} className={`flex flex-col items-center gap-2 p-4 rounded-2xl glass-card border border-white/40 shadow-sm hover:bg-white/60 transition-colors active:scale-95 w-24 ${requestSent ? 'opacity-50' : ''}`}>
-              {requestSent ? <ShieldCheck className="w-6 h-6 text-amber-500 animate-pulse" /> : <Lock className="w-6 h-6 text-green-500" />}
-              <span className="text-xs font-semibold text-on-surface">{requestSent ? 'Pending...' : 'Secret'}</span>
-            </button>
-            <button className="flex flex-col items-center gap-2 p-4 rounded-2xl glass-card border border-white/40 shadow-sm hover:bg-white/60 transition-colors active:scale-95 w-24">
-              <Phone className="w-6 h-6 text-emerald-500" />
-              <span className="text-xs font-semibold text-on-surface">Audio</span>
-            </button>
+          <div className="flex items-center gap-6 py-2">
+            <div className="text-center">
+              <span className="block font-black text-lg text-on-surface">{userPosts.length}</span>
+              <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Posts</span>
+            </div>
+            <div className="text-center">
+              <span className="block font-black text-lg text-on-surface">{contact.followers?.length || 0}</span>
+              <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Followers</span>
+            </div>
+            <div className="text-center">
+              <span className="block font-black text-lg text-on-surface">{contact.following?.length || 0}</span>
+              <span className="text-[10px] uppercase font-bold text-on-surface-variant tracking-wider">Following</span>
+            </div>
+          </div>
+
+          <div className="flex gap-3 w-full max-w-sm pt-2">
+            {isFollowing ? (
+              <>
+                <button 
+                  onClick={handleMessage}
+                  className="flex-1 py-3 rounded-2xl bg-secondary text-white font-bold shadow-lg shadow-secondary/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  Message
+                </button>
+                <button 
+                  onClick={() => unfollowUser(contact.id)}
+                  className="px-6 py-3 rounded-2xl bg-surface-container text-on-surface font-bold border border-white/40 active:scale-95 transition-all"
+                >
+                  Following
+                </button>
+              </>
+            ) : isRequested ? (
+              <button 
+                className="w-full py-3 rounded-2xl bg-surface-container text-on-surface-variant font-bold border border-white/40 flex items-center justify-center gap-2"
+              >
+                <Clock className="w-5 h-5" />
+                Requested
+              </button>
+            ) : (
+              <button 
+                onClick={() => followUser(contact.id)}
+                className="w-full py-3 rounded-2xl liquid-gradient text-white font-bold shadow-lg shadow-primary/20 active:scale-95 transition-all flex items-center justify-center gap-2"
+              >
+                <UserPlus className="w-5 h-5" />
+                Follow
+              </button>
+            )}
           </div>
         </div>
+
+        {isPrivate ? (
+          <div className="flex flex-col items-center justify-center py-20 text-center space-y-4 px-8">
+            <div className="w-20 h-20 rounded-full bg-surface-container flex items-center justify-center text-on-surface-variant">
+              <Lock className="w-10 h-10" />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-on-surface">This Account is Private</h3>
+              <p className="text-on-surface-variant mt-1">Follow this account to see their posts and highlights.</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            {/* Highlights Mock */}
+            <div className="flex gap-4 overflow-x-auto py-4 scrollbar-hide">
+              {[1, 2, 3].map(i => (
+                <div key={i} className="flex flex-col items-center gap-2 shrink-0">
+                  <div className="w-16 h-16 rounded-full p-0.5 border-2 border-surface-container-highest">
+                    <div className="w-full h-full rounded-full bg-surface-container flex items-center justify-center overflow-hidden">
+                      <img src={`https://picsum.photos/seed/highlight${i}/200`} className="w-full h-full object-cover" />
+                    </div>
+                  </div>
+                  <span className="text-[10px] font-bold text-on-surface-variant">Highlight {i}</span>
+                </div>
+              ))}
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-surface-container">
+              <button 
+                onClick={() => setActiveTab('posts')}
+                className={`flex-1 py-4 flex items-center justify-center gap-2 transition-all relative ${activeTab === 'posts' ? 'text-primary' : 'text-on-surface-variant'}`}
+              >
+                <Grid className="w-5 h-5" />
+                {activeTab === 'posts' && <motion.div layoutId="tab-underline" className="absolute bottom-0 w-1/2 h-0.5 bg-primary rounded-full" />}
+              </button>
+              <button 
+                onClick={() => setActiveTab('highlights')}
+                className={`flex-1 py-4 flex items-center justify-center gap-2 transition-all relative ${activeTab === 'highlights' ? 'text-primary' : 'text-on-surface-variant'}`}
+              >
+                <PlayCircle className="w-5 h-5" />
+                {activeTab === 'highlights' && <motion.div layoutId="tab-underline" className="absolute bottom-0 w-1/2 h-0.5 bg-primary rounded-full" />}
+              </button>
+            </div>
+
+            {/* Grid */}
+            <div className="grid grid-cols-3 gap-1 pt-1">
+              {userPosts.length > 0 ? userPosts.map(post => (
+                <div key={post.id} className="aspect-square bg-surface-container overflow-hidden group cursor-pointer relative">
+                  <img src={post.mediaUrl} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                  {post.mediaType === 'video' && (
+                    <PlayCircle className="absolute top-2 right-2 w-4 h-4 text-white drop-shadow-md" />
+                  )}
+                </div>
+              )) : (
+                <div className="col-span-3 py-20 text-center text-on-surface-variant">
+                  <p className="font-medium">No posts yet</p>
+                </div>
+              )}
+            </div>
+          </>
+        )}
 
         <div className="glass-card rounded-[2rem] overflow-hidden border border-white/40 shadow-sm mt-8">
           <div className="p-5 border-b border-white/20">
             <h3 className="text-sm font-bold text-primary uppercase tracking-wider mb-2">About</h3>
             <p className="text-on-surface">{contact.bio || 'Hey there! I am using Aqualyn.'}</p>
           </div>
-          <div className="p-5 border-b border-white/20 flex items-center justify-between hover:bg-white/40 transition-colors cursor-pointer">
+          <div onClick={handleMute} className="p-5 border-b border-white/20 flex items-center justify-between hover:bg-white/40 transition-colors cursor-pointer">
             <div className="flex items-center gap-4">
               <Bell className="w-5 h-5 text-on-surface-variant" />
               <span className="font-semibold text-on-surface">Mute Notifications</span>
             </div>
-            <div className="w-12 h-6 rounded-full bg-surface-container-highest p-1 cursor-pointer">
-              <div className="w-4 h-4 rounded-full bg-white shadow-sm"></div>
+            <div className={`w-12 h-6 rounded-full p-1 transition-colors ${chat?.isMuted ? 'bg-secondary' : 'bg-surface-container-highest'}`}>
+              <motion.div 
+                animate={{ x: chat?.isMuted ? 24 : 0 }}
+                className="w-4 h-4 rounded-full bg-white shadow-sm"
+              />
             </div>
           </div>
           <div className="p-5 border-b border-white/20 flex items-center justify-between hover:bg-white/40 transition-colors cursor-pointer">
@@ -101,11 +233,11 @@ export default function ContactProfileScreen({ onBack, onNavigate }: { onBack: (
         </div>
 
         <div className="glass-card rounded-[2rem] overflow-hidden border border-white/40 shadow-sm">
-          <div className="p-5 border-b border-white/20 flex items-center gap-4 hover:bg-red-50/50 transition-colors cursor-pointer text-red-500">
+          <div onClick={handleBlock} className="p-5 border-b border-white/20 flex items-center gap-4 hover:bg-red-50/50 transition-colors cursor-pointer text-red-500">
             <Ban className="w-5 h-5" />
-            <span className="font-semibold">Block {contact.name}</span>
+            <span className="font-semibold">{isBlocked ? 'Unblock' : 'Block'} {contact.name}</span>
           </div>
-          <div className="p-5 flex items-center gap-4 hover:bg-red-50/50 transition-colors cursor-pointer text-red-500">
+          <div onClick={handleReport} className="p-5 flex items-center gap-4 hover:bg-red-50/50 transition-colors cursor-pointer text-red-500">
             <Trash2 className="w-5 h-5" />
             <span className="font-semibold">Report Contact</span>
           </div>

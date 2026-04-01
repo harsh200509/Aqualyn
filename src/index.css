@@ -58,6 +58,25 @@
   --font-label: "Inter", sans-serif;
 }
 
+.dark {
+  --color-background: #0a0f12;
+  --color-surface: #0a0f12;
+  --color-on-background: #f3f7fb;
+  --color-on-surface: #f3f7fb;
+  --color-surface-container: #1a1f23;
+  --color-surface-container-low: #12171a;
+  --color-surface-container-high: #22272b;
+  --color-surface-container-highest: #2a2f32;
+  --color-surface-variant: #2a2f32;
+  --color-on-surface-variant: #a9aeb1;
+  --color-outline: #73777b;
+  --color-outline-variant: #45494d;
+  --color-primary: #4d8eff;
+  --color-on-primary: #002a62;
+  --color-secondary: #00ecef;
+  --color-on-secondary: #003334;
+}
+
 @layer utilities {
   .glass-card {
     background: rgba(255, 255, 255, 0.4);
@@ -96,6 +115,25 @@
   }
   .bg-aqua-depth {
     background: radial-gradient(circle at 50% -20%, var(--color-on-secondary) 0%, var(--color-surface) 60%);
+  }
+  
+  /* Bubble Styles */
+  .bubble-rounded .chat-bubble {
+    border-radius: 1.5rem !important;
+  }
+  .bubble-sharp .chat-bubble {
+    border-radius: 0.5rem !important;
+  }
+  .bubble-glass .chat-bubble {
+    border-radius: 1rem !important;
+    background: rgba(255, 255, 255, var(--aqua-intensity, 40%)) !important;
+    backdrop-filter: blur(12px) !important;
+    -webkit-backdrop-filter: blur(12px) !important;
+    border: 1px solid rgba(255, 255, 255, 0.2) !important;
+  }
+  .dark .bubble-glass .chat-bubble {
+    background: rgba(0, 0, 0, var(--aqua-intensity, 40%)) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
   }
   
   .scrollbar-hide {

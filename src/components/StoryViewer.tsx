@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Send, Heart, Share2, MoreHorizontal, MessageCircle } from 'lucide-react';
+import { X, Send, Heart, Share2, MoreHorizontal, MessageCircle, Star, Trash2, VolumeX } from 'lucide-react';
 import { useAppContext, Story } from '../context/AppContext';
 
 interface StoryViewerProps {
@@ -10,11 +10,13 @@ interface StoryViewerProps {
 }
 
 export default function StoryViewer({ stories, initialIndex, onClose }: StoryViewerProps) {
-  const { addStoryComment } = useAppContext();
+  const { addStoryComment, currentUser, addToast, setStories, chats, startChatWithContact, sendMessage } = useAppContext();
   const [currentIndex, setCurrentIndex] = useState(initialIndex);
   const [progress, setProgress] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
   const [replyText, setReplyText] = useState('');
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isSendMenuOpen, setIsSendMenuOpen] = useState(false);
 
   const currentStory = stories[currentIndex];
 
@@ -37,12 +39,78 @@ export default function StoryViewer({ stories, initialIndex, onClose }: StoryVie
   const handleSendReply = () => {
     if (currentStory && replyText.trim()) {
       addStoryComment(currentStory.id, replyText);
+      
+      if (currentStory.userId !== currentUser?.id) {
+        const existingChat = chats.find(c => !c.isGroup && c.participantIds?.includes(currentStory.userId));
+        if (existingChat) {
+          sendMessage(existingChat.id, replyText, {
+            imageUrl: currentStory.mediaType === 'image' ? currentStory.mediaUrl : undefined,
+            videoUrl: currentStory.mediaType === 'video' ? currentStory.mediaUrl : undefined
+          });
+        }
+      }
+      
       setReplyText('');
+      addToast('Reply sent', 'success');
     }
   };
 
+  const handleSendReaction = (emoji: string) => {
+    if (currentStory) {
+      addStoryComment(currentStory.id, emoji);
+      
+      if (currentStory.userId !== currentUser?.id) {
+        const existingChat = chats.find(c => !c.isGroup && c.participantIds?.includes(currentStory.userId));
+        if (existingChat) {
+          sendMessage(existingChat.id, emoji, {
+            imageUrl: currentStory.mediaType === 'image' ? currentStory.mediaUrl : undefined,
+            videoUrl: currentStory.mediaType === 'video' ? currentStory.mediaUrl : undefined
+          });
+        }
+      }
+      addToast(`Sent ${emoji}`, 'success');
+    }
+  };
+
+  const handleDeleteStory = () => {
+    if (!currentStory) return;
+    setStories(prev => prev.filter(s => s.id !== currentStory.id));
+    addToast('Story deleted', 'info');
+    setIsMenuOpen(false);
+    if (stories.length <= 1) {
+      onClose();
+    } else {
+      handleNext();
+    }
+  };
+
+  const handleAddToHighlights = () => {
+    addToast('Added to highlights', 'success');
+    setIsMenuOpen(false);
+  };
+
+  const handleShare = () => {
+    addToast('Link copied to clipboard', 'success');
+    setIsMenuOpen(false);
+  };
+
+  const handleSendToChat = (chatId: string) => {
+    if (currentStory) {
+      const options: any = {};
+      if (currentStory.mediaType === 'image') {
+        options.imageUrl = currentStory.mediaUrl;
+      } else if (currentStory.mediaType === 'video') {
+        options.videoUrl = currentStory.mediaUrl;
+      }
+      sendMessage(chatId, `Shared a story from ${currentStory.userName}`, options);
+      addToast('Story sent to chat', 'success');
+    }
+    setIsSendMenuOpen(false);
+    setIsMenuOpen(false);
+  };
+
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused || isMenuOpen || isSendMenuOpen) return;
 
     const duration = 5000; // 5 seconds per story
     const interval = 50; 
@@ -60,7 +128,9 @@ export default function StoryViewer({ stories, initialIndex, onClose }: StoryVie
     }, interval);
 
     return () => clearInterval(timer);
-  }, [currentIndex, isPaused, handleNext]);
+  }, [currentIndex, isPaused, isMenuOpen, isSendMenuOpen, handleNext]);
+
+  if (!currentStory) return null;
 
   return (
     <AnimatePresence>
@@ -97,7 +167,43 @@ export default function StoryViewer({ stories, initialIndex, onClose }: StoryVie
               </div>
             </div>
             <div className="flex items-center gap-4">
-              <button className="text-white drop-shadow-md"><MoreHorizontal /></button>
+              <div className="relative">
+                <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-white drop-shadow-md"><MoreHorizontal /></button>
+                <AnimatePresence>
+                  {isMenuOpen && (
+                    <>
+                      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-40" onClick={() => setIsMenuOpen(false)} />
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.9, y: -10 }}
+                        animate={{ opacity: 1, scale: 1, y: 0 }}
+                        exit={{ opacity: 0, scale: 0.9, y: -10 }}
+                        className="absolute right-0 top-full mt-2 w-48 bg-surface rounded-2xl p-2 shadow-xl border border-white/10 z-50 flex flex-col gap-1"
+                      >
+                        {currentStory.userId === currentUser?.id && (
+                          <button onClick={handleAddToHighlights} className="flex items-center gap-3 px-3 py-2 hover:bg-white/5 rounded-xl text-sm font-medium text-on-surface transition-colors">
+                            <Star className="w-4 h-4" /> Add to Highlights
+                          </button>
+                        )}
+                        <button onClick={handleShare} className="flex items-center gap-3 px-3 py-2 hover:bg-white/5 rounded-xl text-sm font-medium text-on-surface transition-colors">
+                          <Share2 className="w-4 h-4" /> Share
+                        </button>
+                        <button onClick={() => { setIsMenuOpen(false); setIsSendMenuOpen(true); }} className="flex items-center gap-3 px-3 py-2 hover:bg-white/5 rounded-xl text-sm font-medium text-on-surface transition-colors">
+                          <Send className="w-4 h-4" /> Send to Chat
+                        </button>
+                        {currentStory.userId === currentUser?.id ? (
+                          <button onClick={handleDeleteStory} className="flex items-center gap-3 px-3 py-2 hover:bg-red-500/10 text-red-500 rounded-xl text-sm font-medium transition-colors">
+                            <Trash2 className="w-4 h-4" /> Delete
+                          </button>
+                        ) : (
+                          <button onClick={() => { addToast('Story muted', 'info'); setIsMenuOpen(false); }} className="flex items-center gap-3 px-3 py-2 hover:bg-red-500/10 text-red-500 rounded-xl text-sm font-medium transition-colors">
+                            <VolumeX className="w-4 h-4" /> Mute Story
+                          </button>
+                        )}
+                      </motion.div>
+                    </>
+                  )}
+                </AnimatePresence>
+              </div>
               <button onClick={onClose} className="text-white drop-shadow-md"><X /></button>
             </div>
           </div>
@@ -154,8 +260,7 @@ export default function StoryViewer({ stories, initialIndex, onClose }: StoryVie
                   <Send className="w-4 h-4" />
                 </button>
               </div>
-              <button className="text-white active:scale-125 transition-transform"><Heart className="w-6 h-6" /></button>
-              <button className="text-white active:scale-125 transition-transform"><Share2 className="w-6 h-6" /></button>
+              <button onClick={() => handleSendReaction('❤️')} className="text-white active:scale-125 transition-transform"><Heart className="w-6 h-6" /></button>
             </div>
 
             {/* Quick Reactions */}
@@ -163,7 +268,7 @@ export default function StoryViewer({ stories, initialIndex, onClose }: StoryVie
               {['🔥', '😂', '😮', '😢', '😍', '👏'].map(emoji => (
                 <button 
                   key={emoji}
-                  onClick={() => addStoryComment(currentStory.id, emoji)}
+                  onClick={() => handleSendReaction(emoji)}
                   className="text-2xl hover:scale-125 transition-transform active:scale-90"
                 >
                   {emoji}
@@ -172,6 +277,38 @@ export default function StoryViewer({ stories, initialIndex, onClose }: StoryVie
             </div>
           </div>
         </div>
+
+        {/* Send to Chat Overlay */}
+        <AnimatePresence>
+          {isSendMenuOpen && (
+            <motion.div
+              initial={{ opacity: 0, y: '100%' }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: '100%' }}
+              className="absolute inset-x-0 bottom-0 bg-surface rounded-t-[2rem] p-6 z-50 flex flex-col h-[60vh]"
+            >
+              <div className="flex justify-between items-center mb-4">
+                <h3 className="text-lg font-bold text-on-surface">Send to...</h3>
+                <button onClick={() => setIsSendMenuOpen(false)} className="p-2 text-on-surface-variant hover:bg-white/10 rounded-full">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex-1 overflow-y-auto space-y-2">
+                {chats.filter(c => !c.isGroup && !c.id.startsWith('bot')).map(chat => (
+                  <button 
+                    key={chat.id} 
+                    onClick={() => handleSendToChat(chat.id)}
+                    className="w-full flex items-center gap-3 p-3 hover:bg-white/5 rounded-xl transition-colors"
+                  >
+                    <img src={chat.avatar} alt={chat.name} className="w-12 h-12 rounded-full object-cover" />
+                    <span className="font-medium text-on-surface">{chat.name}</span>
+                  </button>
+                ))}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
       </motion.div>
     </AnimatePresence>
   );

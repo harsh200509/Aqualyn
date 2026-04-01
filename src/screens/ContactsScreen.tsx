@@ -1,10 +1,12 @@
-import React from 'react';
-import { motion } from 'motion/react';
-import { ArrowLeft, Search, UserPlus } from 'lucide-react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { ArrowLeft, Search, UserPlus, X, Share2, Phone, User, Check } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
+import AddContactModal from '../components/modals/AddContactModal';
 
 export default function ContactsScreen({ onNavigate }: { onNavigate: (s: string) => void }) {
-  const { contacts, setActiveContactId, setActiveChatId, isLoading } = useAppContext();
+  const { contacts, setActiveContactId, startChatWithContact, isLoading, addContact, addToast } = useAppContext();
+  const [isAddContactOpen, setIsAddContactOpen] = useState(false);
 
   const handleContactClick = (id: string) => {
     setActiveContactId(id);
@@ -13,9 +15,22 @@ export default function ContactsScreen({ onNavigate }: { onNavigate: (s: string)
 
   const handleMessageClick = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
-    // In a real app, this would find or create a chat with this user
-    setActiveChatId(id); 
+    startChatWithContact(id); 
     onNavigate('chat-detail');
+  };
+
+  const handleInvite = () => {
+    // In a real app, this would use the Web Share API or copy a link
+    if (navigator.share) {
+      navigator.share({
+        title: 'Join Aqualyn',
+        text: 'Hey! Join me on Aqualyn, the best messaging app.',
+        url: 'https://aqualyn.io/invite',
+      }).catch(console.error);
+    } else {
+      navigator.clipboard.writeText('https://aqualyn.io/invite');
+      addToast('Invite link copied to clipboard!', 'success');
+    }
   };
 
   const SkeletonContact = () => (
@@ -36,10 +51,18 @@ export default function ContactsScreen({ onNavigate }: { onNavigate: (s: string)
             <h1 className="text-2xl font-black text-on-surface font-headline tracking-tight">Contacts</h1>
           </div>
           <div className="flex items-center gap-4">
-            <button className="p-2 rounded-full text-cyan-600 hover:bg-white/20 transition-colors active:scale-95 duration-200">
-              <Search className="w-6 h-6" />
+            <button 
+              onClick={handleInvite}
+              className="p-2 rounded-full text-cyan-600 hover:bg-white/20 transition-colors active:scale-95 duration-200"
+              title="Invite Friends"
+            >
+              <Share2 className="w-6 h-6" />
             </button>
-            <button className="p-2 rounded-full text-cyan-600 hover:bg-white/20 transition-colors active:scale-95 duration-200">
+            <button 
+              onClick={() => setIsAddContactOpen(true)}
+              className="p-2 rounded-full text-cyan-600 hover:bg-white/20 transition-colors active:scale-95 duration-200"
+              title="Add Contact"
+            >
               <UserPlus className="w-6 h-6" />
             </button>
           </div>
@@ -47,6 +70,20 @@ export default function ContactsScreen({ onNavigate }: { onNavigate: (s: string)
       </header>
 
       <main className="pt-20 px-4 max-w-2xl mx-auto">
+        {/* Invite Friends Action Item */}
+        <div 
+          onClick={handleInvite}
+          className="mb-4 p-4 rounded-2xl flex items-center gap-4 cursor-pointer bg-gradient-to-r from-secondary/10 to-primary/10 border border-secondary/20 hover:border-secondary/40 transition-all shadow-sm"
+        >
+          <div className="w-14 h-14 rounded-full bg-secondary/20 flex items-center justify-center text-secondary">
+            <Share2 className="w-6 h-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <h3 className="font-headline font-bold text-secondary">Invite Friends</h3>
+            <p className="text-sm text-on-surface-variant">Share a link to join Aqualyn</p>
+          </div>
+        </div>
+
         {isLoading ? (
           <div className="space-y-2">
             {[1, 2, 3, 4, 5].map(i => <SkeletonContact key={i} />)}
@@ -76,6 +113,11 @@ export default function ContactsScreen({ onNavigate }: { onNavigate: (s: string)
           </div>
         )}
       </main>
+
+      <AddContactModal 
+        isOpen={isAddContactOpen} 
+        onClose={() => setIsAddContactOpen(false)} 
+      />
     </motion.div>
   );
 }

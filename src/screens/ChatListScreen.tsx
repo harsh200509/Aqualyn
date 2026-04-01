@@ -3,9 +3,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { Search, Pin, Users, CheckCheck, Mic, UserPlus, Lock, Pen, Bot, Globe, MoreVertical, Download, Moon, Sun, Trash2, CheckSquare, Archive, Volume2, VolumeX, Eye, EyeOff, FolderPlus, Eraser, ChevronRight } from 'lucide-react';
 import { useAppContext } from '../context/AppContext';
 import NewChatModal from '../components/chat/NewChatModal';
+import NewFolderModal from '../components/modals/NewFolderModal';
 
 export default function ChatListScreen({ onNavigate }: { onNavigate: (s: string) => void }) {
-  const { currentUser, chats, setActiveChatId, messages, isLoading, folders, archiveChat, pinChat, muteChat, deleteChat, clearHistory, markAsRead, addChatToFolder, addToast, archiveLockPin } = useAppContext();
+  const { currentUser, chats, setActiveChatId, messages, isLoading, folders, archiveChat, pinChat, muteChat, deleteChat, clearHistory, markAsRead, addChatToFolder, addToast, archiveLockPin, theme, setTheme, globalUsers, followUser, startChatWithContact, setActiveContactId } = useAppContext();
   const [activeTab, setActiveTab] = useState<string>('all');
   const [isNewChatModalOpen, setIsNewChatModalOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -13,13 +14,13 @@ export default function ChatListScreen({ onNavigate }: { onNavigate: (s: string)
   const [showHeaderMenu, setShowHeaderMenu] = useState(false);
   const [isSelectionMode, setIsSelectionMode] = useState(false);
   const [selectedChats, setSelectedChats] = useState<Set<string>>(new Set());
-  const [isDarkMode, setIsDarkMode] = useState(false);
   const pressTimer = React.useRef<NodeJS.Timeout | null>(null);
   const [contextMenuChatId, setContextMenuChatId] = useState<string | null>(null);
   const [contextMenuPos, setContextMenuPos] = useState({ x: 0, y: 0 });
   const [showFolderSubmenu, setShowFolderSubmenu] = useState(false);
   const [isArchivePinModalOpen, setIsArchivePinModalOpen] = useState(false);
   const [archivePinValue, setArchivePinValue] = useState('');
+  const [isNewFolderModalOpen, setIsNewFolderModalOpen] = useState(false);
 
   const handleChatClick = (id: string) => {
     if (isSelectionMode) {
@@ -78,14 +79,15 @@ export default function ChatListScreen({ onNavigate }: { onNavigate: (s: string)
   };
 
   const toggleTheme = () => {
-    setIsDarkMode(!isDarkMode);
-    if (!isDarkMode) {
+    const newMode = theme.mode === 'dark' ? 'light' : 'dark';
+    setTheme(prev => ({ ...prev, mode: newMode }));
+    if (newMode === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
     setShowHeaderMenu(false);
-    addToast(`Switched to ${!isDarkMode ? 'Dark' : 'Light'} Mode`, 'success');
+    addToast(`Switched to ${newMode === 'dark' ? 'Dark' : 'Light'} Mode`, 'success');
   };
 
   const handleExportChats = () => {
@@ -207,19 +209,6 @@ export default function ChatListScreen({ onNavigate }: { onNavigate: (s: string)
                 <h1 className="text-2xl font-black bg-gradient-to-br from-cyan-600 to-blue-500 bg-clip-text text-transparent font-headline tracking-tight">Aqualyn</h1>
               </div>
               <div className="flex items-center gap-2 relative">
-                <button 
-                  onClick={() => {
-                    if (archiveLockPin) {
-                      setIsArchivePinModalOpen(true);
-                    } else {
-                      setActiveTab('archived');
-                    }
-                  }}
-                  className="p-2 rounded-full text-cyan-600 hover:bg-white/20 transition-colors active:scale-95 duration-200"
-                  title="Archived Chats"
-                >
-                  <Archive className="w-6 h-6" />
-                </button>
                 <button onClick={() => setIsSearching(true)} className="p-2 rounded-full text-cyan-600 hover:bg-white/20 transition-colors active:scale-95 duration-200">
                   <Search className="w-6 h-6" />
                 </button>
@@ -241,8 +230,8 @@ export default function ChatListScreen({ onNavigate }: { onNavigate: (s: string)
                           <CheckSquare className="w-4 h-4" /> Select Chats
                         </button>
                         <button onClick={toggleTheme} className="flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-xl text-sm font-medium text-on-surface transition-colors">
-                          {isDarkMode ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} 
-                          {isDarkMode ? 'Light Mode' : 'Dark Mode'}
+                          {theme.mode === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />} 
+                          {theme.mode === 'dark' ? 'Light Mode' : 'Dark Mode'}
                         </button>
                       </motion.div>
                     </>
@@ -255,7 +244,7 @@ export default function ChatListScreen({ onNavigate }: { onNavigate: (s: string)
         
         {/* Tabs */}
         {!isSearching && !isSelectionMode && (
-          <div className="flex gap-2 px-4 py-3 overflow-x-auto scrollbar-hide">
+          <div className="flex gap-2 px-4 py-3 overflow-x-auto scrollbar-hide items-center">
             {['all', ...folders.map(f => f.name.toLowerCase()), 'personal', 'groups', 'unread', 'bots'].map((tab) => (
               <button 
                 key={tab}
@@ -274,6 +263,12 @@ export default function ChatListScreen({ onNavigate }: { onNavigate: (s: string)
                 )}
               </button>
             ))}
+            <button 
+              onClick={() => setIsNewFolderModalOpen(true)}
+              className="px-3 py-1.5 rounded-full font-semibold text-sm whitespace-nowrap transition-all bg-white/40 text-on-surface-variant hover:bg-white/60 border border-white/20 flex items-center justify-center shrink-0"
+            >
+              <FolderPlus className="w-4 h-4" />
+            </button>
           </div>
         )}
       </header>
@@ -298,6 +293,71 @@ export default function ChatListScreen({ onNavigate }: { onNavigate: (s: string)
                   <Globe className="w-4 h-4" />
                   <h2 className="font-headline font-bold text-sm tracking-tight uppercase">Global Search Results</h2>
                 </div>
+                
+                {/* User Search Results */}
+                <div className="space-y-3 mb-6">
+                  {globalUsers
+                    .filter(u => 
+                      u.id !== currentUser?.id && 
+                      (u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+                       u.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                       u.phone?.includes(searchQuery))
+                    )
+                    .map(user => {
+                      const isFollowing = currentUser?.following?.includes(user.id);
+                      const isRequested = user.followRequests?.includes(currentUser?.id || '');
+                      
+                      return (
+                        <div 
+                          key={user.id}
+                          className="glass-card p-4 rounded-2xl flex items-center gap-4 border border-secondary-fixed/20 hover:bg-white/60 transition-all"
+                        >
+                          <div 
+                            className="w-14 h-14 rounded-full overflow-hidden cursor-pointer"
+                            onClick={() => {
+                              setActiveContactId(user.id);
+                              onNavigate('contact-profile');
+                            }}
+                          >
+                            <img src={user.avatar} alt={user.name} className="w-full h-full object-cover" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-1">
+                              <h3 className="font-headline font-bold text-on-surface truncate">{user.name}</h3>
+                              {user.isPrivate && <Lock className="w-3 h-3 text-on-surface-variant" />}
+                            </div>
+                            <p className="text-sm text-on-surface-variant truncate">@{user.username}</p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            {isFollowing ? (
+                              <button 
+                                onClick={() => {
+                                  startChatWithContact(user.id);
+                                  onNavigate('chat-detail');
+                                }}
+                                className="px-4 py-1.5 rounded-full bg-secondary/10 text-secondary text-xs font-bold hover:bg-secondary/20 transition-colors"
+                              >
+                                Message
+                              </button>
+                            ) : isRequested ? (
+                              <button className="px-4 py-1.5 rounded-full bg-surface-container text-on-surface-variant text-xs font-bold cursor-default">
+                                Requested
+                              </button>
+                            ) : (
+                              <button 
+                                onClick={() => followUser(user.id)}
+                                className="px-4 py-1.5 rounded-full liquid-gradient text-white text-xs font-bold shadow-sm active:scale-95 transition-all"
+                              >
+                                Follow
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                </div>
+
+                {/* Bot & Group Mock Results */}
                 <div className="glass-card p-4 rounded-2xl flex items-center gap-4 border border-secondary-fixed/20 cursor-pointer hover:bg-white/60 transition-all mb-2">
                   <div className="w-14 h-14 rounded-full bg-blue-500/20 flex items-center justify-center text-blue-600">
                     <Bot className="w-6 h-6" />
@@ -381,7 +441,6 @@ export default function ChatListScreen({ onNavigate }: { onNavigate: (s: string)
               <div>
                 <div className="flex items-center justify-between px-2 mb-4">
                   <h2 className="font-headline font-bold text-lg tracking-tight text-on-surface">Recent</h2>
-                  <button onClick={handleOpenArchive} className="text-xs font-bold text-primary tracking-widest uppercase">Archive</button>
                 </div>
                 <div className="space-y-2">
                   {recentChats.map(chat => {
@@ -542,9 +601,6 @@ export default function ChatListScreen({ onNavigate }: { onNavigate: (s: string)
                 {chats.find(c => c.id === contextMenuChatId)?.unreadCount ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />} 
                 {chats.find(c => c.id === contextMenuChatId)?.unreadCount ? 'Mark as read' : 'Mark as unread'}
               </button>
-              <button onClick={() => handleContextAction(() => clearHistory(contextMenuChatId!))} className="flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-xl text-sm font-medium text-on-surface transition-colors">
-                <Trash2 className="w-4 h-4" /> Clear History
-              </button>
               <button onClick={() => handleContextAction(() => deleteChat(contextMenuChatId!))} className="flex items-center gap-3 px-3 py-2 hover:bg-white/10 rounded-xl text-sm font-medium text-red-500 transition-colors">
                 <Trash2 className="w-4 h-4" /> Delete Chat
               </button>
@@ -593,6 +649,11 @@ export default function ChatListScreen({ onNavigate }: { onNavigate: (s: string)
           </>
         )}
       </AnimatePresence>
+
+      <NewFolderModal
+        isOpen={isNewFolderModalOpen}
+        onClose={() => setIsNewFolderModalOpen(false)}
+      />
     </motion.div>
   );
 }

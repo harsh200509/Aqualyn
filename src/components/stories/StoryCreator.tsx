@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { 
   X, Camera, Image as ImageIcon, Type, Smile, Music, 
   Send, ChevronLeft, Download, Zap, RefreshCw, 
-  MapPin, Hash, AtSign, Search, Heart
+  MapPin, Hash, AtSign, Search, Heart, Star, Settings, Check
 } from 'lucide-react';
 import { useAppContext } from '../../context/AppContext';
 
@@ -27,8 +27,8 @@ interface TextOverlay {
 }
 
 export default function StoryCreator({ onClose }: { onClose: () => void }) {
-  const { addStory, currentUser } = useAppContext();
-  const [step, setStep] = useState<'capture' | 'edit'>('capture');
+  const { addStory, currentUser, toggleCloseFriend, globalUsers } = useAppContext();
+  const [step, setStep] = useState<'capture' | 'edit' | 'settings'>('capture');
   const [mediaUrl, setMediaUrl] = useState<string | null>(null);
   const [mediaType, setMediaType] = useState<'image' | 'video'>('image');
   const [filter, setFilter] = useState('none');
@@ -39,6 +39,8 @@ export default function StoryCreator({ onClose }: { onClose: () => void }) {
   const [showStickers, setShowStickers] = useState(false);
   const [isFrontCamera, setIsFrontCamera] = useState(true);
   const [isRecording, setIsRecording] = useState(false);
+  const [isCloseFriendsOnly, setIsCloseFriendsOnly] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
   
   const videoRef = useRef<HTMLVideoElement>(null);
 
@@ -102,11 +104,17 @@ export default function StoryCreator({ onClose }: { onClose: () => void }) {
         mediaUrl,
         mediaType,
         stickers,
-        // In a real app, we'd flatten text overlays into the image or store them
+        isCloseFriends: isCloseFriendsOnly,
       });
       onClose();
     }
   };
+
+  const filteredUsers = globalUsers.filter(u => 
+    u.id !== currentUser?.id && 
+    (u.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+     u.username?.toLowerCase().includes(searchQuery.toLowerCase()))
+  );
 
   return (
     <motion.div 
@@ -127,6 +135,9 @@ export default function StoryCreator({ onClose }: { onClose: () => void }) {
         
         {step === 'edit' && (
           <div className="flex gap-3 pointer-events-auto">
+            <button onClick={() => setStep('settings')} className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white">
+              <Settings className="w-6 h-6" />
+            </button>
             <button onClick={() => setIsAddingText(true)} className="w-10 h-10 rounded-full bg-black/20 backdrop-blur-md flex items-center justify-center text-white">
               <Type className="w-6 h-6" />
             </button>
@@ -186,7 +197,7 @@ export default function StoryCreator({ onClose }: { onClose: () => void }) {
               </button>
             </div>
           </div>
-        ) : (
+        ) : step === 'edit' ? (
           <div className="h-full relative">
             {/* Media Preview */}
             <div 
@@ -259,19 +270,102 @@ export default function StoryCreator({ onClose }: { onClose: () => void }) {
             </div>
 
             {/* Edit Controls */}
-            <div className="absolute bottom-12 left-0 right-0 px-8 flex items-center justify-between">
+            <div className="absolute bottom-12 left-0 right-0 px-8 flex items-center gap-4">
               <button 
                 onClick={() => setStep('capture')}
-                className="flex items-center gap-2 text-white font-bold bg-white/10 backdrop-blur-md px-4 py-3 rounded-2xl"
+                className="flex items-center justify-center w-14 h-14 rounded-2xl bg-white/10 backdrop-blur-md text-white"
               >
-                <ChevronLeft className="w-5 h-5" /> Back
+                <ChevronLeft className="w-6 h-6" />
               </button>
               
+              <button 
+                onClick={() => setIsCloseFriendsOnly(!isCloseFriendsOnly)}
+                className={`flex-1 flex items-center justify-center gap-2 px-4 py-4 rounded-2xl font-bold transition-all ${isCloseFriendsOnly ? 'bg-green-500 text-white shadow-[0_0_20px_rgba(34,197,94,0.4)]' : 'bg-white/10 backdrop-blur-md text-white'}`}
+              >
+                <Star className={`w-5 h-5 ${isCloseFriendsOnly ? 'fill-white' : ''}`} />
+                Close Friends
+              </button>
+
               <button 
                 onClick={handleShare}
                 className="flex items-center gap-3 bg-white text-black px-8 py-4 rounded-2xl font-black shadow-xl active:scale-95 transition-transform"
               >
                 Share <Send className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="h-full bg-surface flex flex-col">
+            <div className="p-6 border-b border-outline-variant/10 flex items-center justify-between">
+              <button onClick={() => setStep('edit')} className="p-2 text-on-surface"><ChevronLeft /></button>
+              <h3 className="text-xl font-black text-on-surface">Story Settings</h3>
+              <div className="w-10" />
+            </div>
+            
+            <div className="flex-1 overflow-y-auto p-6 space-y-8">
+              <section className="space-y-4">
+                <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-widest">Close Friends</h4>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-on-surface-variant/40" />
+                  <input 
+                    type="text"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search friends..."
+                    className="w-full pl-12 pr-4 py-4 rounded-2xl bg-surface-container text-on-surface font-semibold outline-none"
+                  />
+                </div>
+                <div className="space-y-2">
+                  {filteredUsers.map(user => {
+                    const isCloseFriend = currentUser?.closeFriends?.includes(user.id);
+                    return (
+                      <div key={user.id} className="flex items-center justify-between p-3 rounded-2xl bg-surface-container-low">
+                        <div className="flex items-center gap-3">
+                          <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full" />
+                          <div>
+                            <p className="font-bold text-on-surface text-sm">{user.name}</p>
+                            <p className="text-xs text-on-surface-variant">@{user.username}</p>
+                          </div>
+                        </div>
+                        <button 
+                          onClick={() => toggleCloseFriend(user.id)}
+                          className={`w-6 h-6 rounded-full border-2 flex items-center justify-center transition-all ${isCloseFriend ? 'bg-green-500 border-green-500' : 'border-outline-variant'}`}
+                        >
+                          {isCloseFriend && <Check className="w-4 h-4 text-white" />}
+                        </button>
+                      </div>
+                    );
+                  })}
+                </div>
+              </section>
+
+              <section className="space-y-4">
+                <h4 className="text-xs font-black text-on-surface-variant uppercase tracking-widest">Privacy</h4>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-surface-container-low">
+                    <div>
+                      <p className="font-bold text-on-surface">Hide story from</p>
+                      <p className="text-xs text-on-surface-variant">0 people</p>
+                    </div>
+                    <ChevronLeft className="w-5 h-5 rotate-180 text-on-surface-variant" />
+                  </div>
+                  <div className="flex items-center justify-between p-4 rounded-2xl bg-surface-container-low">
+                    <div>
+                      <p className="font-bold text-on-surface">Allow message replies</p>
+                      <p className="text-xs text-on-surface-variant">Everyone</p>
+                    </div>
+                    <ChevronLeft className="w-5 h-5 rotate-180 text-on-surface-variant" />
+                  </div>
+                </div>
+              </section>
+            </div>
+            
+            <div className="p-6">
+              <button 
+                onClick={() => setStep('edit')}
+                className="w-full py-4 bg-primary text-on-primary rounded-2xl font-black shadow-xl"
+              >
+                Done
               </button>
             </div>
           </div>

@@ -131,7 +131,7 @@ export default function MessageBubble({ msg, isMe, onReply, onEdit, replyMessage
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
         onContextMenu={(e) => { e.preventDefault(); setShowContextMenu(true); }}
-        className={`${isMe ? 'glass-sent rounded-tr-none' : 'glass-received rounded-tl-none'} rounded-2xl p-1 shadow-sm relative cursor-pointer group`}
+        className={`chat-bubble ${isMe ? 'glass-sent rounded-tr-none' : 'glass-received rounded-tl-none'} rounded-2xl p-1 shadow-sm relative cursor-pointer group`}
       >
         {/* Reply Block */}
         {replyMessage && (
